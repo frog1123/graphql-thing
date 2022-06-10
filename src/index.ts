@@ -1,37 +1,12 @@
 import { Url } from 'url';
+
 const { ApolloServer, gql } = require('apollo-server');
+import { loadSchemaSync } from '@graphql-tools/load';
+import { GraphQLFileLoader } from '@graphql-tools/graphql-file-loader';
+import { addResolversToSchema } from '@graphql-tools/schema';
+import { join } from 'path';
 
-const typeDefs = gql`
-  type Query {
-    hello(name: String!): String!
-  }
-
-  type User {
-    id: ID!
-    username: String!
-  }
-
-  type RegisterResponse {
-    errors: [Error!]!
-    user: User!
-  }
-
-  input UserInfo {
-    username: String!
-    password: String!
-  }
-
-  type Mutation {
-    register(userInfo: UserInfo): RegisterResponse!
-    login(userInfo: UserInfo): Boolean!
-  }
-
-  type Error {
-    field: String!
-    message: String!
-  }
-`;
-
+const schema = loadSchemaSync(join('src', 'schema.gql'), { loaders: [new GraphQLFileLoader()] });
 const resolvers = {
   Query: {
     hello: (parent: any, { name }: { name: string }) => `Hello, ${name}`
@@ -53,6 +28,11 @@ const resolvers = {
   }
 };
 
-const server = new ApolloServer({ typeDefs, resolvers });
+const schemaWithResolvers = addResolversToSchema({
+  schema,
+  resolvers
+});
+
+const server = new ApolloServer({ schema: schemaWithResolvers });
 
 server.listen(3000).then(({ url }: { url: Url }) => console.log(`Server listening on ${url}`));
